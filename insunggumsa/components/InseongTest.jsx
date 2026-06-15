@@ -214,26 +214,30 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
               ← 이전
             </button>
 
-            {current === totalQ - 1 ? (
-              <button onClick={onSubmit} disabled={!allAnswered} style={{
-                flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
-                background: allAnswered ? "linear-gradient(135deg,#6366F1,#4F46E5)" : "#1E293B",
-                color: allAnswered ? "white" : "#475569",
-                fontSize: 14, fontWeight: 700, cursor: allAnswered ? "pointer" : "default",
-                fontFamily: "'Noto Sans KR', sans-serif",
-              }}>
-                {allAnswered ? "결과 분석하기 →" : `${totalQ - Object.keys(answers).length}문항 남음`}
-              </button>
-            ) : (
-              <button onClick={() => navigate(1)} disabled={!answered} style={{
-                flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
-                background: answered ? "rgba(99,102,241,0.2)" : "#1E293B",
-                color: answered ? "#A5B4FC" : "#475569",
-                fontSize: 14, cursor: answered ? "pointer" : "default",
-                fontFamily: "'Noto Sans KR', sans-serif",
-              }}>
-                다음 →
-              </button>
+   {current === totalQ - 1 ? (
+  <button
+    onClick={() => {
+      if (allAnswered) {
+        onSubmit();
+      } else {
+        // 첫 번째 미응답 문항으로 이동
+        const firstUnanswered = shuffled.findIndex(q => answers[q.id] == null);
+        if (firstUnanswered !== -1) {
+          setFade(false);
+          setTimeout(() => { setCurrent(firstUnanswered); setFade(true); }, 200);
+        }
+      }
+    }}
+    style={{
+      flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
+      background: allAnswered ? "linear-gradient(135deg,#6366F1,#4F46E5)" : "rgba(245,158,11,0.2)",
+      color: allAnswered ? "white" : "#FCD34D",
+      fontSize: 14, fontWeight: 700, cursor: "pointer",
+      fontFamily: "'Noto Sans KR', sans-serif",
+    }}
+  >
+    {allAnswered ? "결과 보기 →" : `⚠ ${totalQ - Object.keys(answers).length}문항 미응답 — 클릭해서 이동`}
+  </button>
             )}
           </div>
         </div>
