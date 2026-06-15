@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>인적성 검사</title>
+
+<style>
+body {
+    font-family: 'Segoe UI', sans-serif;
+    background: #f4f6f9;
+    margin: 0;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 0 15px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+}
+
+.question {
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.question p {
+    font-weight: bold;
+}
+
+.options label {
+    margin-right: 15px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 15px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+.result {
+    margin-top: 30px;
+    padding: 20px;
+    background: #eef5ff;
+    border-radius: 10px;
+    display: none;
+}
+
+.score {
+    margin: 10px 0;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>인적성 검사</h1>
+
+    <form id="testForm"></form>
+
+    <button onclick="calculateResult()">결과 확인</button>
+
+    <div class="result" id="result"></div>
+</div>
+
+<script>
+
+const questions = [
+{ text:"새로운 정보를 분석하는 것을 좋아한다.", type:"analysis" },
+{ text:"문제의 원인을 파악하는 편이다.", type:"analysis" },
+{ text:"데이터를 기반으로 판단한다.", type:"analysis" },
+{ text:"복잡한 내용을 체계적으로 정리한다.", type:"analysis" },
+{ text:"논리적인 사고에 자신이 있다.", type:"analysis" },
+
+{ text:"사람들과 쉽게 친해진다.", type:"communication" },
+{ text:"대화하는 것을 즐긴다.", type:"communication" },
+{ text:"협업 상황에서 의견 조율을 잘한다.", type:"communication" },
+{ text:"타인의 감정을 잘 이해한다.", type:"communication" },
+{ text:"팀 활동을 선호한다.", type:"communication" },
+
+{ text:"결정한 일은 바로 실행한다.", type:"execution" },
+{ text:"목표 달성 의지가 강하다.", type:"execution" },
+{ text:"책임감을 가지고 끝까지 수행한다.", type:"execution" },
+{ text:"업무 속도가 빠른 편이다.", type:"execution" },
+{ text:"도전적인 과제를 좋아한다.", type:"execution" },
+
+{ text:"새로운 아이디어가 자주 떠오른다.", type:"creative" },
+{ text:"기존 방식을 개선하려고 한다.", type:"creative" },
+{ text:"상상력이 풍부하다는 말을 듣는다.", type:"creative" },
+{ text:"변화를 긍정적으로 받아들인다.", type:"creative" },
+{ text:"창의적인 해결책을 찾는 것을 좋아한다.", type:"creative" }
+];
+
+const form = document.getElementById("testForm");
+
+questions.forEach((q, index) => {
+
+    let html = `
+    <div class="question">
+        <p>${index + 1}. ${q.text}</p>
+        <div class="options">
+    `;
+
+    for(let i=1;i<=5;i++){
+        html += `
+        <label>
+            <input type="radio" name="q${index}" value="${i}">
+            ${i}
+        </label>
+        `;
+    }
+
+    html += `
+        </div>
+    </div>
+    `;
+
+    form.innerHTML += html;
+});
+
+function calculateResult(){
+
+    let analysis = 0;
+    let communication = 0;
+    let execution = 0;
+    let creative = 0;
+
+    for(let i=0;i<questions.length;i++){
+
+        const selected =
+        document.querySelector(`input[name="q${i}"]:checked`);
+
+        if(!selected){
+            alert(`${i+1}번 문항에 응답해주세요.`);
+            return;
+        }
+
+        const score = Number(selected.value);
+
+        switch(questions[i].type){
+            case "analysis":
+                analysis += score;
+                break;
+            case "communication":
+                communication += score;
+                break;
+            case "execution":
+                execution += score;
+                break;
+            case "creative":
+                creative += score;
+                break;
+        }
+    }
+
+    const scores = {
+        "분석형": analysis,
+        "소통형": communication,
+        "실행형": execution,
+        "창의형": creative
+    };
+
+    let resultType =
+    Object.keys(scores).reduce((a,b)=>
+        scores[a] > scores[b] ? a : b
+    );
+
+    const descriptions = {
+        "분석형":"논리적 사고와 문제 해결 능력이 뛰어난 유형입니다.",
+        "소통형":"협업과 대인관계에서 강점을 보이는 유형입니다.",
+        "실행형":"목표 달성과 추진력이 뛰어난 유형입니다.",
+        "창의형":"새로운 아이디어와 혁신을 추구하는 유형입니다."
+    };
+
+    document.getElementById("result").style.display = "block";
+
+    document.getElementById("result").innerHTML = `
+        <h2>검사 결과</h2>
+
+        <div class="score">분석형 : ${analysis}점</div>
+        <div class="score">소통형 : ${communication}점</div>
+        <div class="score">실행형 : ${execution}점</div>
+        <div class="score">창의형 : ${creative}점</div>
+
+        <hr>
+
+        <h3>당신의 주 유형: ${resultType}</h3>
+        <p>${descriptions[resultType]}</p>
+    `;
+
+    window.scrollTo({
+        top: document.body.scrollHeight,
+        behavior: "smooth"
+    });
+}
+</script>
+
+</body>
+</html>
