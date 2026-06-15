@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useMemo, useCallback } from "react";
-import { ALL_QUESTIONS, DIM_META } from "../lib/questions";
-import { analyzeScores } from "../lib/analysis";
-import AdUnit from "../components/AdUnit";
+import { ALL_QUESTIONS, DIM_META } from "./lib/questions";
+import { analyzeScores } from "./lib/analysis";
+import AdUnit from "./components/AdUnit";
 
 function shuffle(arr) {
   const a = [...arr];
