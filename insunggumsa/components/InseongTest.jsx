@@ -2,8 +2,8 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { ALL_QUESTIONS, DIM_META } from "@/lib/questions";
-
-const LIKERT_LABELS = ["전혀\n아니다", "아니다", "보통\n이다", "그렇다", "매우\n그렇다"];
+import { analyzeScores } from "@/lib/analysis";
+import AdUnit from "@/components/AdUnit";
 
 function shuffle(arr) {
   const a = [...arr];
@@ -14,7 +14,7 @@ function shuffle(arr) {
   return a;
 }
 
-// ── Welcome ──────────────────────────────────
+// ── Welcome ───────────────────────────────────
 function WelcomeScreen({ mode, setMode, onStart }) {
   return (
     <div style={{
@@ -31,14 +31,14 @@ function WelcomeScreen({ mode, setMode, onStart }) {
           borderRadius: 100, padding: "6px 16px", marginBottom: 28,
           color: "#A5B4FC", fontSize: 12, letterSpacing: "0.08em", fontWeight: 600,
         }}>
-          취업 준비용 AI 인성검사
+          취업 준비용 무료 인성검사
         </div>
 
         <h1 style={{ color: "#F1F5F9", fontSize: 38, fontWeight: 800, margin: "0 0 12px", lineHeight: 1.2 }}>
           직무 인성검사
         </h1>
         <p style={{ color: "#94A3B8", fontSize: 15, margin: "0 0 40px", lineHeight: 1.7 }}>
-          200문항 · 9개 역량 척도 · AI 리포트<br />
+          200문항 · 9개 역량 척도 · 무료<br />
           삼성, LG, CJ 등 대기업 인성검사 유형 반영
         </p>
 
@@ -46,7 +46,7 @@ function WelcomeScreen({ mode, setMode, onStart }) {
           <p style={{ color: "#64748B", fontSize: 13, marginBottom: 14, fontWeight: 600, letterSpacing: "0.05em" }}>
             응답 방식 선택
           </p>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+          <div style={{ display: "flex", gap: 12 }}>
             {[
               { key: "likert", label: "리커트 5점 척도", sub: "전혀 아니다 ~ 매우 그렇다" },
               { key: "yesno",  label: "예 / 아니요",    sub: "이분법적 판단" },
@@ -66,7 +66,7 @@ function WelcomeScreen({ mode, setMode, onStart }) {
         </div>
 
         <div style={{ display: "flex", gap: 10, marginBottom: 36 }}>
-          {[{ icon: "📋", label: "200문항" }, { icon: "⏱", label: "약 20~30분" }, { icon: "🔒", label: "저장 없음" }].map(
+          {[{ icon: "📋", label: "200문항" }, { icon: "⏱", label: "약 20~30분" }, { icon: "🔒", label: "완전 무료" }].map(
             ({ icon, label }) => (
               <div key={label} style={{
                 flex: 1, background: "rgba(255,255,255,0.04)", borderRadius: 10,
@@ -93,10 +93,77 @@ function WelcomeScreen({ mode, setMode, onStart }) {
           background: "linear-gradient(135deg, #6366F1, #4F46E5)",
           color: "white", fontSize: 16, fontWeight: 700, cursor: "pointer",
           boxShadow: "0 8px 32px rgba(99,102,241,0.4)",
-          fontFamily: "'Noto Sans KR', sans-serif",
+          fontFamily: "'Noto Sans KR', sans-serif", marginBottom: 32,
         }}>
           검사 시작하기 →
         </button>
+
+        {/* 광고: 시작 화면 하단 */}
+        <AdUnit style={{ marginTop: 8 }} />
+      </div>
+    </div>
+  );
+}
+
+// ── Question Navigator ────────────────────────
+function QuestionNavigator({ shuffled, current, answers, onJump, onClose }) {
+  const totalQ = shuffled.length;
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 100,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }}>
+      <div style={{
+        background: "#1E293B", borderRadius: 20, padding: "24px",
+        width: "100%", maxWidth: 600, maxHeight: "85vh", overflow: "auto",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div>
+            <div style={{ color: "#F1F5F9", fontSize: 16, fontWeight: 700 }}>문항 현황</div>
+            <div style={{ color: "#64748B", fontSize: 12, marginTop: 4 }}>
+              응답 완료 {Object.keys(answers).length} / {totalQ}
+              {" · "}
+              <span style={{ color: "#F59E0B" }}>미응답 {totalQ - Object.keys(answers).length}문항</span>
+            </div>
+          </div>
+          <button onClick={onClose} style={{
+            background: "rgba(255,255,255,0.08)", border: "none", borderRadius: 8,
+            color: "#94A3B8", fontSize: 18, cursor: "pointer", padding: "4px 10px",
+          }}>✕</button>
+        </div>
+
+        {/* 범례 */}
+        <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+          {[
+            { color: "#6366F1", label: "현재 문항" },
+            { color: "#10B981", label: "응답 완료" },
+            { color: "#334155", label: "미응답" },
+          ].map(({ color, label }) => (
+            <div key={label} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <div style={{ width: 12, height: 12, borderRadius: 3, background: color }} />
+              <span style={{ color: "#64748B", fontSize: 11 }}>{label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* 문항 번호 격자 */}
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {shuffled.map((q, idx) => {
+            const isAnswered = answers[q.id] != null;
+            const isCurrent = idx === current;
+            return (
+              <button key={idx} onClick={() => { onJump(idx); onClose(); }} style={{
+                width: 36, height: 36, borderRadius: 8, border: "none",
+                background: isCurrent ? "#6366F1" : isAnswered ? "#10B981" : "#334155",
+                color: isCurrent || isAnswered ? "white" : "#64748B",
+                fontSize: 11, fontWeight: 600, cursor: "pointer",
+                transition: "all 0.1s",
+              }}>
+                {idx + 1}
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -110,11 +177,17 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
   const allAnswered = Object.keys(answers).length === totalQ;
   const progress = ((current + 1) / totalQ) * 100;
   const [fade, setFade] = useState(true);
+  const [showNav, setShowNav] = useState(false);
   const dimInfo = DIM_META[q?.dim] || {};
 
   const navigate = useCallback((dir) => {
     setFade(false);
     setTimeout(() => { setCurrent((c) => c + dir); setFade(true); }, 200);
+  }, [setCurrent]);
+
+  const jumpTo = useCallback((idx) => {
+    setFade(false);
+    setTimeout(() => { setCurrent(idx); setFade(true); }, 200);
   }, [setCurrent]);
 
   const handleAnswer = (val) => {
@@ -127,14 +200,29 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
 
   return (
     <div style={{ minHeight: "100vh", background: "#0F172A", display: "flex", flexDirection: "column", fontFamily: "'Noto Sans KR', sans-serif" }}>
-      {/* Header */}
+      {showNav && (
+        <QuestionNavigator
+          shuffled={shuffled} current={current} answers={answers}
+          onJump={jumpTo} onClose={() => setShowNav(false)}
+        />
+      )}
+      {/* Progress */}
       <div style={{ background: "#1E293B", padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         <div style={{ maxWidth: 640, margin: "0 auto" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
             <span style={{ color: "#64748B", fontSize: 13 }}>진행률</span>
-            <span style={{ color: "#A5B4FC", fontSize: 13, fontWeight: 700 }}>
-              {current + 1} <span style={{ color: "#475569" }}>/ {totalQ}</span>
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <button onClick={() => setShowNav(true)} style={{
+                background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 6, color: "#94A3B8", fontSize: 11, cursor: "pointer",
+                padding: "3px 10px", fontFamily: "'Noto Sans KR', sans-serif",
+              }}>
+                문항 목록
+              </button>
+              <span style={{ color: "#A5B4FC", fontSize: 13, fontWeight: 700 }}>
+                {current + 1} <span style={{ color: "#475569" }}>/ {totalQ}</span>
+              </span>
+            </div>
           </div>
           <div style={{ height: 4, background: "#334155", borderRadius: 4, overflow: "hidden" }}>
             <div style={{
@@ -145,7 +233,6 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
         </div>
       </div>
 
-      {/* Question */}
       <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
         <div style={{ maxWidth: 640, width: "100%", opacity: fade ? 1 : 0, transition: "opacity 0.2s ease" }}>
           {q?.dim !== "L" && (
@@ -173,11 +260,9 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
                     border: answered === val ? "2px solid #6366F1" : "2px solid rgba(255,255,255,0.08)",
                     background: answered === val ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.03)",
                     color: answered === val ? "#A5B4FC" : "#64748B",
-                    fontSize: 20, fontWeight: 700, cursor: "pointer",
-                    transition: "all 0.15s", fontFamily: "'Noto Sans KR', sans-serif",
-                  }}>
-                    {val}
-                  </button>
+                    fontSize: 20, fontWeight: 700, cursor: "pointer", transition: "all 0.15s",
+                    fontFamily: "'Noto Sans KR', sans-serif",
+                  }}>{val}</button>
                 ))}
               </div>
               <div style={{ display: "flex", justifyContent: "space-between", padding: "0 4px" }}>
@@ -210,73 +295,33 @@ function TestScreen({ shuffled, current, setCurrent, answers, onAnswer, onSubmit
               color: current === 0 ? "#334155" : "#94A3B8",
               fontSize: 14, cursor: current === 0 ? "default" : "pointer",
               fontFamily: "'Noto Sans KR', sans-serif",
-            }}>
-              ← 이전
-            </button>
+            }}>← 이전</button>
 
-   {current === totalQ - 1 ? (
-  <button
-    onClick={() => {
-      if (allAnswered) {
-        onSubmit();
-      } else {
-        // 첫 번째 미응답 문항으로 이동
-        const firstUnanswered = shuffled.findIndex(q => answers[q.id] == null);
-        if (firstUnanswered !== -1) {
-          setFade(false);
-          setTimeout(() => { setCurrent(firstUnanswered); setFade(true); }, 200);
-        }
-      }
-    }}
-    style={{
-      flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
-      background: allAnswered ? "linear-gradient(135deg,#6366F1,#4F46E5)" : "rgba(245,158,11,0.2)",
-      color: allAnswered ? "white" : "#FCD34D",
-      fontSize: 14, fontWeight: 700, cursor: "pointer",
-      fontFamily: "'Noto Sans KR', sans-serif",
-    }}
-  >
-    {allAnswered ? "결과 보기 →" : `⚠ ${totalQ - Object.keys(answers).length}문항 미응답 — 클릭해서 이동`}
-  </button>
+            {current === totalQ - 1 ? (
+              <button
+                onClick={() => allAnswered ? onSubmit() : setShowNav(true)}
+                style={{
+                  flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
+                  background: allAnswered ? "linear-gradient(135deg,#6366F1,#4F46E5)" : "rgba(245,158,11,0.15)",
+                  color: allAnswered ? "white" : "#F59E0B",
+                  fontSize: 14, fontWeight: 700, cursor: "pointer",
+                  fontFamily: "'Noto Sans KR', sans-serif",
+                  border: allAnswered ? "none" : "1px solid rgba(245,158,11,0.3)",
+                }}
+              >
+                {allAnswered ? "결과 보기 →" : `⚠ 미응답 ${totalQ - Object.keys(answers).length}문항 확인`}
+              </button>
+            ) : (
+              <button onClick={() => navigate(1)} disabled={!answered} style={{
+                flex: 1, padding: "12px 24px", borderRadius: 10, border: "none",
+                background: answered ? "rgba(99,102,241,0.2)" : "#1E293B",
+                color: answered ? "#A5B4FC" : "#475569",
+                fontSize: 14, cursor: answered ? "pointer" : "default",
+                fontFamily: "'Noto Sans KR', sans-serif",
+              }}>다음 →</button>
             )}
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Loading ───────────────────────────────────
-function LoadingScreen() {
-  const [step, setStep] = useState(0);
-  const steps = ["응답 데이터 분석 중...", "성격 유형 산출 중...", "AI 리포트 생성 중...", "거의 완료됐습니다..."];
-
-  useState(() => {
-    const t = setInterval(() => setStep((s) => Math.min(s + 1, steps.length - 1)), 2500);
-    return () => clearInterval(t);
-  });
-
-  return (
-    <div style={{
-      minHeight: "100vh", background: "#0F172A",
-      display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-      fontFamily: "'Noto Sans KR', sans-serif", padding: 24,
-    }}>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      <div style={{
-        width: 72, height: 72, borderRadius: "50%",
-        border: "3px solid rgba(99,102,241,0.15)", borderTop: "3px solid #6366F1",
-        animation: "spin 1s linear infinite", marginBottom: 32,
-      }} />
-      <h2 style={{ color: "#F1F5F9", fontSize: 22, fontWeight: 700, marginBottom: 12 }}>결과 분석 중</h2>
-      <p style={{ color: "#6366F1", fontSize: 14, minHeight: 24 }}>{steps[step]}</p>
-      <div style={{ marginTop: 48, display: "flex", gap: 8 }}>
-        {steps.map((_, i) => (
-          <div key={i} style={{
-            width: i <= step ? 24 : 8, height: 8, borderRadius: 4,
-            background: i <= step ? "#6366F1" : "#1E293B", transition: "all 0.3s",
-          }} />
-        ))}
       </div>
     </div>
   );
@@ -316,7 +361,7 @@ function ScoreBar({ dim, score }) {
 // ── Results ───────────────────────────────────
 function ResultsScreen({ results, onRestart }) {
   const { scores, analysis } = results;
-  const lScore = scores["L"] || 3;
+  const lScore = scores["L"] ?? 3;
   const reliabilityPct = Math.max(0, Math.min(100, ((5 - lScore) / 4) * 100));
   const reliabilityLabel =
     reliabilityPct >= 70 ? { text: "높음", color: "#10B981" }
@@ -326,6 +371,7 @@ function ResultsScreen({ results, onRestart }) {
   return (
     <div style={{ minHeight: "100vh", background: "#0F172A", fontFamily: "'Noto Sans KR', sans-serif", padding: "32px 16px" }}>
       <div style={{ maxWidth: 680, margin: "0 auto" }}>
+
         <div style={{ textAlign: "center", marginBottom: 36 }}>
           <div style={{
             display: "inline-block", background: "rgba(99,102,241,0.1)",
@@ -333,10 +379,13 @@ function ResultsScreen({ results, onRestart }) {
             padding: "6px 16px", color: "#A5B4FC", fontSize: 12, fontWeight: 600, marginBottom: 16,
           }}>검사 완료</div>
           <h1 style={{ color: "#F1F5F9", fontSize: 32, fontWeight: 800, margin: "0 0 8px" }}>인성검사 결과 리포트</h1>
-          <p style={{ color: "#64748B", fontSize: 13 }}>200문항 기반 · AI 분석 완료</p>
+          <p style={{ color: "#64748B", fontSize: 13 }}>200문항 기반 분석</p>
         </div>
 
-        {/* Reliability */}
+        {/* 광고: 결과 상단 */}
+        <AdUnit style={{ marginBottom: 24 }} />
+
+        {/* 신뢰도 */}
         <div style={{
           background: "#1E293B", borderRadius: 16, padding: "20px 24px", marginBottom: 20,
           border: `1px solid ${reliabilityLabel.color}30`,
@@ -358,75 +407,69 @@ function ResultsScreen({ results, onRestart }) {
           <div style={{ height: 6, background: "#0F172A", borderRadius: 4, overflow: "hidden" }}>
             <div style={{ height: "100%", width: `${reliabilityPct}%`, borderRadius: 4, background: reliabilityLabel.color }} />
           </div>
-          {analysis?.reliabilityComment && (
-            <p style={{ color: "#64748B", fontSize: 13, marginTop: 12 }}>{analysis.reliabilityComment}</p>
-          )}
+          <p style={{ color: "#64748B", fontSize: 13, marginTop: 12 }}>{analysis.reliabilityComment}</p>
         </div>
 
-        {/* Personality type */}
-        {analysis && (
-          <div style={{
-            background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))",
-            border: "1px solid rgba(99,102,241,0.3)", borderRadius: 16, padding: "24px", marginBottom: 20,
-          }}>
-            <div style={{ color: "#A5B4FC", fontSize: 12, fontWeight: 600, marginBottom: 8 }}>성격 유형</div>
-            <div style={{ color: "#F1F5F9", fontSize: 26, fontWeight: 800, marginBottom: 12 }}>{analysis.personalityType}</div>
-            <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.typeDescription}</p>
-          </div>
-        )}
+        {/* 성격 유형 */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))",
+          border: "1px solid rgba(99,102,241,0.3)", borderRadius: 16, padding: "24px", marginBottom: 20,
+        }}>
+          <div style={{ color: "#A5B4FC", fontSize: 12, fontWeight: 600, marginBottom: 8 }}>성격 유형</div>
+          <div style={{ color: "#F1F5F9", fontSize: 26, fontWeight: 800, marginBottom: 12 }}>{analysis.personalityType}</div>
+          <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.typeDescription}</p>
+        </div>
 
-        {/* Scores */}
+        {/* 역량 점수 */}
         <div style={{ background: "#1E293B", borderRadius: 16, padding: "24px", marginBottom: 20 }}>
           <h3 style={{ color: "#F1F5F9", fontSize: 16, fontWeight: 700, margin: "0 0 24px" }}>역량별 점수</h3>
           {Object.keys(DIM_META).map((dim) => scores[dim] != null && <ScoreBar key={dim} dim={dim} score={scores[dim]} />)}
         </div>
 
-        {/* Strengths & Weaknesses */}
-        {analysis && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-            {[
-              { key: "strengths",  title: "✦ 강점",     color: "#10B981" },
-              { key: "weaknesses", title: "▲ 개선 영역", color: "#F59E0B" },
-            ].map(({ key, title, color }) => (
-              <div key={key} style={{ background: "#1E293B", borderRadius: 16, padding: "20px" }}>
-                <div style={{ color, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>{title}</div>
-                {analysis[key]?.map((s, i) => (
-                  <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start" }}>
-                    <div style={{
-                      width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-                      background: `${color}18`, color, fontSize: 11, fontWeight: 700,
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}>{i + 1}</div>
-                    <span style={{ color: "#CBD5E1", fontSize: 13, lineHeight: 1.5 }}>{s}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
+        {/* 강점 / 개선 */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          {[
+            { key: "strengths",  title: "✦ 강점",     color: "#10B981" },
+            { key: "weaknesses", title: "▲ 개선 영역", color: "#F59E0B" },
+          ].map(({ key, title, color }) => (
+            <div key={key} style={{ background: "#1E293B", borderRadius: 16, padding: "20px" }}>
+              <div style={{ color, fontSize: 13, fontWeight: 700, marginBottom: 16 }}>{title}</div>
+              {analysis[key]?.map((s, i) => (
+                <div key={i} style={{ display: "flex", gap: 10, marginBottom: 12, alignItems: "flex-start" }}>
+                  <div style={{
+                    width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
+                    background: `${color}18`, color, fontSize: 11, fontWeight: 700,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                  }}>{i + 1}</div>
+                  <span style={{ color: "#CBD5E1", fontSize: 13, lineHeight: 1.5 }}>{s}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
 
-        {/* Career fit & advice */}
-        {analysis && (
-          <div style={{ background: "#1E293B", borderRadius: 16, padding: "24px", marginBottom: 28 }}>
-            <div style={{ marginBottom: 20 }}>
-              <div style={{ color: "#6366F1", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>🎯 적합한 직무 · 환경</div>
-              <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.careerFit}</p>
-            </div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
-              <div style={{ color: "#8B5CF6", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>💡 취업 준비 조언</div>
-              <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.advice}</p>
-            </div>
+        {/* 직무 / 조언 */}
+        <div style={{ background: "#1E293B", borderRadius: 16, padding: "24px", marginBottom: 24 }}>
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ color: "#6366F1", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>🎯 적합한 직무 · 환경</div>
+            <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.careerFit}</p>
           </div>
-        )}
+          <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: 20 }}>
+            <div style={{ color: "#8B5CF6", fontSize: 13, fontWeight: 700, marginBottom: 10 }}>💡 취업 준비 조언</div>
+            <p style={{ color: "#94A3B8", fontSize: 14, lineHeight: 1.7, margin: 0 }}>{analysis.advice}</p>
+          </div>
+        </div>
+
+        {/* 광고: 결과 하단 */}
+        <AdUnit style={{ marginBottom: 24 }} />
 
         <button onClick={onRestart} style={{
           width: "100%", padding: 16, borderRadius: 14,
           border: "1px solid rgba(255,255,255,0.1)", background: "transparent",
           color: "#64748B", fontSize: 14, cursor: "pointer",
           fontFamily: "'Noto Sans KR', sans-serif",
-        }}>
-          다시 검사하기
-        </button>
+        }}>다시 검사하기</button>
+
         <p style={{ textAlign: "center", color: "#334155", fontSize: 11, marginTop: 24 }}>
           이 검사는 참고용입니다. 공식 채용 인성검사를 대체하지 않습니다.
         </p>
@@ -462,20 +505,10 @@ export default function InseongTest() {
     return avgs;
   };
 
-  const handleSubmit = async () => {
-    setPhase("loading");
+  const handleSubmit = () => {
     const scores = computeScores();
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ scores }),
-      });
-      const data = await res.json();
-      setResults({ scores, analysis: data.analysis });
-    } catch {
-      setResults({ scores, analysis: null });
-    }
+    const analysis = analyzeScores(scores);
+    setResults({ scores, analysis });
     setPhase("results");
   };
 
@@ -488,7 +521,6 @@ export default function InseongTest() {
       answers={answers} onAnswer={handleAnswer} onSubmit={handleSubmit} mode={mode}
     />
   );
-  if (phase === "loading") return <LoadingScreen />;
   if (phase === "results") return <ResultsScreen results={results} onRestart={restart} />;
   return null;
 }
