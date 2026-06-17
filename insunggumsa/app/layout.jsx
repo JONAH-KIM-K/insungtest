@@ -16,7 +16,7 @@ export const metadata = {
   },
   // 검색엔진 소유권 확인 — 가입 후 발급된 코드로 교체하세요
   verification: {
-    google: "google-site-verification=Vyw0xCH4Ikp71oKbi7aYkH0trJBQpeLoNDTFBKjbr7w", // Google Search Console에서 발급
+    google: "<meta name="google-site-verification" content="xbfc-37kbDuRWax0Q3DLEkbpKDQQzzAb7spxHVDrOcY" />", // Google Search Console에서 발급
     other: {
       "naver-site-verification": "NAVER_VERIFICATION_CODE", // 네이버 서치어드바이저에서 발급
     },
